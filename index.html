@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LCM Communication Explorer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #000; line-height: 1.6; }
+    
+    .journey-map {
+      display: flex;
+      gap: 0.5rem;
+      margin: 1.5rem 0;
+      padding: 1rem;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+    .stage-dot {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #e0e0e0;
+      border: 2px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #666;
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    .stage-dot.active { background: #000; color: #fff; border-color: #000; }
+    .stage-dot.passed { background: #ccc; color: #fff; border-color: #aaa; }
+    .stage-connector {
+      flex: 1;
+      height: 2px;
+      background: #ddd;
+      margin-top: 19px;
+      transition: background 0.3s;
+    }
+    .stage-connector.passed { background: #999; }
+    
+    .container { max-width: 800px; margin: 0 auto; padding: 2rem; min-height: 100vh; }
+    
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    h1 { font-size: 1.6rem; margin-bottom: 0.3rem; font-weight: 700; }
+    h2 { font-size: 1.2rem; margin: 1.3rem 0 0.6rem 0; font-weight: 600; }
+    p { margin-bottom: 0.8rem; }
+    
+    .mission-label { font-size: 0.75rem; color: #999; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; margin-bottom: 0.5rem; }
+    .mission-title { font-size: 1.4rem; font-weight: 700; color: #000; margin-bottom: 1rem; }
+    
+    .section-box { background: #fafafa; border-left: 4px solid #000; padding: 1rem; margin: 1rem 0; border-radius: 2px; }
+    .section-box strong { display: block; margin-bottom: 0.4rem; color: #000; }
+    .section-box p { margin: 0; font-size: 0.95rem; }
+    
+    .achievement-card {
+      background: linear-gradient(135deg, #f9f9f9 0%, #f5f5f5 100%);
+      border: 2px solid #000;
+      border-radius: 4px;
+      padding: 1rem;
+      margin: 1rem 0;
+      text-align: center;
+    }
+    .achievement-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .achievement-title { font-weight: 700; font-size: 1.05rem; margin-bottom: 0.3rem; }
+    .achievement-desc { font-size: 0.9rem; color: #666; }
+    
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-weight: 500; margin-bottom: 0.3rem; font-size: 0.95rem; }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 0.65rem;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: #fafafa;
+    }
+    textarea { resize: vertical; min-height: 70px; font-family: monospace; font-size: 0.8rem; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #000; background: #fff; }
+    
+    .button-group { display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: space-between; flex-wrap: wrap; }
+    button {
+      padding: 0.65rem 1.3rem;
+      border: 1px solid #000;
+      background: #000;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 3px;
+      transition: all 0.2s;
+    }
+    button:hover { background: #333; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #fff; color: #000; border: 1px solid #ccc; }
+    .btn-secondary:hover { background: #f5f5f5; }
+    .btn-copy { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+    
+    .code-block { background: #f5f5f5; border-left: 3px solid #000; padding: 0.8rem; margin: 0.8rem 0; overflow-x: auto; font-family: monospace; font-size: 0.75rem; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+    
+    .mode-selector { display: flex; gap: 1rem; margin: 1rem 0; }
+    .mode-btn { flex: 1; padding: 1rem; border: 2px solid #ccc; background: #fff; cursor: pointer; border-radius: 4px; text-align: center; font-weight: 600; transition: all 0.2s; }
+    .mode-btn:hover { border-color: #000; }
+    .mode-btn.selected { border-color: #000; background: #000; color: #fff; }
+    
+    .rating-group { margin-bottom: 0.9rem; }
+    .rating-label { display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.3rem; }
+    .rating-scale { display: flex; gap: 0.25rem; }
+    .rating-btn { width: 32px; height: 32px; padding: 0; border: 1px solid #ccc; background: #fff; cursor: pointer; font-weight: 600; font-size: 0.75rem; }
+    .rating-btn:hover { border-color: #000; }
+    .rating-btn.selected { background: #000; color: #fff; }
+    
+    .completion-card { background: #f0f0f0; border: 2px solid #000; border-radius: 4px; padding: 1.5rem; margin: 1rem 0; text-align: center; }
+    .completion-card h2 { margin-top: 0; }
+    .completion-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .completion-opt { padding: 1rem; background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
+    .completion-opt:hover { border-color: #000; }
+    
+    .success-msg { background: #f0f0f0; border-left: 3px solid #000; padding: 0.8rem; margin: 0.8rem 0; }
+    
+    .experience-card {
+      background: linear-gradient(135deg, #f9f9f9 0%, #f5f5f5 100%);
+      border: 2px solid #000;
+      border-radius: 4px;
+      padding: 1.2rem;
+      margin: 1rem 0;
+    }
+    .experience-field { margin-bottom: 0.8rem; }
+    .experience-field strong { display: block; font-size: 0.85rem; color: #666; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .experience-field p { margin: 0; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Screen 0: Language -->
+  <div class="screen active" id="screen0">
+    <h1 style="margin-top: 2rem; text-align: center;">LCM Communication Explorer</h1>
+    <p style="margin: 1.5rem 0; color: #666; text-align: center;">Choose your language / Wähle deine Sprache</p>
+    <div style="display: flex; gap: 1rem; max-width: 300px; margin: 0 auto;">
+      <button onclick="setLanguage('DE')" style="flex: 1;">Deutsch</button>
+      <button onclick="setLanguage('EN')" style="flex: 1;">English</button>
+    </div>
+  </div>
+
+  <!-- Screen 1: Welcome -->
+  <div class="screen" id="screen1">
+    <div class="journey-map" id="journeyMap1"></div>
+    <h1 id="h1"></h1>
+    <div class="section-box" id="welcomeBox"></div>
+    <div class="button-group">
+      <button onclick="goToScreen(2)">Start Mission →</button>
+    </div>
+  </div>
+
+  <!-- Screen 2: Mode Selection -->
+  <div class="screen" id="screen2">
+    <div class="journey-map" id="journeyMap2"></div>
+    <h1 id="h2"></h1>
+    <p id="p2desc"></p>
+    <div class="mode-selector">
+      <button class="mode-btn" onclick="selectMode('light')" id="modeLight">
+        <div style="font-size: 1rem; margin-bottom: 0.5rem;">🔍</div>
+        <div style="font-size: 0.9rem; margin-bottom: 0.3rem;">LCM-Light</div>
+        <div style="font-size: 0.75rem; color: #666;">3 Missionen</div>
+      </button>
+      <button class="mode-btn" onclick="selectMode('extended')" id="modeExtended">
+        <div style="font-size: 1rem; margin-bottom: 0.5rem;">🗺️</div>
+        <div style="font-size: 0.9rem; margin-bottom: 0.3rem;">LCM Extended</div>
+        <div style="font-size: 0.75rem; color: #666;">5 Missionen</div>
+      </button>
+    </div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(1)">← Back</button>
+      <button onclick="goToScreen(3)" id="btn2" disabled>Next →</button>
+    </div>
+  </div>
+
+  <!-- Screen 3-5: Setup (Consent, Info, LLM) -->
+  <div class="screen" id="screen3">
+    <div class="journey-map" id="journeyMap3"></div>
+    <h1 id="h3"></h1>
+    <div class="section-box" id="consentBox"></div>
+    <div class="form-group">
+      <label><input type="checkbox" id="consent"> <span id="consentLabel"></span></label>
+    </div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(2)">← Back</button>
+      <button onclick="goToScreen(4)" id="btn3" disabled>Next →</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen4">
+    <div class="journey-map" id="journeyMap4"></div>
+    <h1 id="h4"></h1>
+    <div class="form-group">
+      <label id="lAge"></label>
+      <input type="number" id="age" min="18" max="120">
+    </div>
+    <div class="form-group">
+      <label id="lAiExp"></label>
+      <select id="aiExp"></select>
+    </div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(3)">← Back</button>
+      <button onclick="goToScreen(5)" id="btn4" disabled>Next →</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen5">
+    <div class="journey-map" id="journeyMap5"></div>
+    <h1 id="h5"></h1>
+    <div class="form-group">
+      <label id="lLlm"></label>
+      <select id="llmSelect">
+        <option value="">-- Choose --</option>
+        <option value="ChatGPT">ChatGPT</option>
+        <option value="Claude">Claude</option>
+        <option value="Gemini">Gemini</option>
+        <option value="Grok">Grok</option>
+        <option value="Perplexity">Perplexity</option>
+        <option value="DeepSeek">DeepSeek</option>
+        <option value="Qwen">Qwen</option>
+        <option value="Mistral">Mistral</option>
+        <option value="Kimi">Kimi</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-group" id="otherLLMGroup" style="display: none;">
+      <input type="text" id="otherLLM" placeholder="Model name">
+    </div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(4)">← Back</button>
+      <button onclick="goToScreen(6)" id="btn5" disabled>Begin Journey →</button>
+    </div>
+  </div>
+
+  <!-- Screen 6: Mission Context -->
+  <div class="screen" id="screen6">
+    <div class="journey-map" id="journeyMap6"></div>
+    <div class="mission-label" id="missionLabel6"></div>
+    <h1 id="h6"></h1>
+    <div class="section-box" id="missionBox6"></div>
+    <div class="code-block" id="scenario6"></div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(5)">← Back</button>
+      <button onclick="goToScreen(7)">Start Missions →</button>
+    </div>
+  </div>
+
+  <!-- Screen 7: Partner Model -->
+  <div class="screen" id="screen7">
+    <div class="journey-map" id="journeyMap7"></div>
+    <div class="mission-label" id="missionLabel7"></div>
+    <h1 id="h7"></h1>
+    <div class="section-box" id="whyBox7"></div>
+    <h2 id="h7task"></h2>
+    <p id="p7task"></p>
+    <div class="code-block" id="prompt7"></div>
+    <button class="btn-copy" onclick="copyToClipboard('prompt7')">📋 Copy Prompt</button>
+    <div class="form-group">
+      <label id="lOutput7"></label>
+      <textarea id="output7"></textarea>
+    </div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(6)">← Back</button>
+      <button onclick="goToScreen(8)" id="btn7" disabled>Next →</button>
+    </div>
+  </div>
+
+  <!-- Screen 8: Self Model -->
+  <div class="screen" id="screen8">
+    <div class="journey-map" id="journeyMap8"></div>
+    <div class="mission-label" id="missionLabel8"></div>
+    <h1 id="h8"></h1>
+    <div class="section-box" id="whyBox8"></div>
+    <h2 id="h8task"></h2>
+    <p id="p8task"></p>
+    <div class="code-block" id="prompt8"></div>
+    <button class="btn-copy" onclick="copyToClipboard('prompt8')">📋 Copy Prompt</button>
+    <div class="form-group">
+      <label id="lOutput8"></label>
+      <textarea id="output8"></textarea>
+    </div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(7)">← Back</button>
+      <button onclick="goToScreen(9)" id="btn8" disabled>Next →</button>
+    </div>
+  </div>
+
+  <!-- Screen 9: Communication Model (Extended only) -->
+  <div class="screen" id="screen9">
+    <div class="journey-map" id="journeyMap9"></div>
+    <div class="mission-label" id="missionLabel9"></div>
+    <h1 id="h9"></h1>
+    <div class="section-box" id="whyBox9"></div>
+    <h2 id="h9task"></h2>
+    <p id="p9task"></p>
+    <div class="code-block" id="prompt9"></div>
+    <button class="btn-copy" onclick="copyToClipboard('prompt9')">📋 Copy Prompt</button>
+    <div class="form-group">
+      <label id="lOutput9"></label>
+      <textarea id="output9"></textarea>
+    </div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(8)">← Back</button>
+      <button onclick="goToScreen(10)" id="btn9" disabled>Next →</button>
+    </div>
+  </div>
+
+  <!-- Screen 10: Reflected Agent -->
+  <div class="screen" id="screen10">
+    <div class="journey-map" id="journeyMap10"></div>
+    <div class="mission-label" id="missionLabel10"></div>
+    <h1 id="h10"></h1>
+    <div class="code-block" id="prompt10"></div>
+    <button class="btn-copy" onclick="copyToClipboard('prompt10')">📋 Copy Prompt</button>
+    <div class="form-group">
+      <label id="lOutput10"></label>
+      <textarea id="output10"></textarea>
+    </div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(9)">← Back</button>
+      <button onclick="goToScreen(11)" id="btn10" disabled>Next →</button>
+    </div>
+  </div>
+
+  <!-- Screen 11: Evaluation Intro -->
+  <div class="screen" id="screen11">
+    <div class="journey-map" id="journeyMap11"></div>
+    <h1 id="h11"></h1>
+    <div class="section-box" id="evalIntroBox"></div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(10)">← Back</button>
+      <button onclick="goToScreen(12)">Start Evaluation →</button>
+    </div>
+  </div>
+
+  <!-- Screen 12: Ratings -->
+  <div class="screen" id="screen12">
+    <div class="journey-map" id="journeyMap12"></div>
+    <h1 id="h12"></h1>
+    <p id="p12inst"></p>
+    <div id="ratingContainer"></div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(11)">← Back</button>
+      <button onclick="goToScreen(13)" id="btn12" disabled>Next →</button>
+    </div>
+  </div>
+
+  <!-- Screen 13: Reflection Intro -->
+  <div class="screen" id="screen13">
+    <div class="journey-map" id="journeyMap13"></div>
+    <h1 id="h13"></h1>
+    <div class="section-box" id="reflectIntroBox"></div>
+    <div class="form-group">
+      <textarea id="feedback" placeholder="Your thoughts..."></textarea>
+    </div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(12)">← Back</button>
+      <button id="btn13next" onclick="goToScreen(14)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Screen 14: Experience Store (Extended only) -->
+  <div class="screen" id="screen14">
+    <div class="journey-map" id="journeyMap14"></div>
+    <div class="mission-label" id="missionLabel14"></div>
+    <h1 id="h14"></h1>
+    <div class="section-box" id="whyBox14"></div>
+    <h2 id="h14task"></h2>
+    <p id="p14task"></p>
+    <div class="code-block" id="prompt14"></div>
+    <button class="btn-copy" onclick="copyToClipboard('prompt14')">📋 Copy Prompt</button>
+    <div class="form-group">
+      <label id="lOutput14"></label>
+      <textarea id="output14"></textarea>
+    </div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(13)">← Back</button>
+      <button onclick="goToScreen(15)" id="btn14" disabled>Next →</button>
+    </div>
+  </div>
+
+  <!-- Screen 15: Future Episode Preview (Extended only) -->
+  <div class="screen" id="screen15">
+    <div class="journey-map" id="journeyMap15"></div>
+    <h1 id="h15"></h1>
+    <div class="section-box" id="futureBox"></div>
+    <div class="button-group">
+      <button class="btn-secondary" onclick="goToScreen(14)">← Back</button>
+      <button id="btn15next" onclick="goToScreen16()">Complete Mission →</button>
+    </div>
+  </div>
+
+  <!-- Screen 16: Completion & Options -->
+  <div class="screen" id="screen16">
+    <div class="achievement-card">
+      <div class="achievement-icon">✓</div>
+      <div class="achievement-title" id="h16"></div>
+      <div class="achievement-desc" id="p16desc"></div>
+    </div>
+    <div id="completionOpts"></div>
+  </div>
+
+  <!-- Screen 17: Export & End -->
+  <div class="screen" id="screen17">
+    <div style="text-align: center; padding: 2rem 0;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+      <h1 id="h17" style="font-size: 2rem; margin-bottom: 0.5rem;"></h1>
+      <p style="font-size: 1.1rem; color: #666; margin-bottom: 2rem;" id="p17end"></p>
+    </div>
+    
+    <div style="background: linear-gradient(135deg, #f9f9f9 0%, #f5f5f5 100%); border: 2px solid #000; border-radius: 4px; padding: 1.5rem; margin: 1.5rem 0; text-align: center;">
+      <p id="p17thanks" style="font-size: 0.95rem; line-height: 1.8; margin: 0;"></p>
+    </div>
+    
+    <h2 style="margin-top: 2rem;">📥 <span id="lJsonExport"></span></h2>
+    <div class="form-group">
+      <textarea id="jsonOutput" readonly style="font-size: 0.75rem; min-height: 120px;"></textarea>
+    </div>
+    
+    <div class="button-group">
+      <button onclick="downloadJSON()">📥 Download JSON</button>
+      <button class="btn-secondary" onclick="downloadCSV()">📥 Download CSV</button>
+      <button class="btn-secondary" onclick="restartMission()" style="flex: 1; margin-top: 1rem;">← Zurück zur Mission / Back to Mission</button>
+    </div>
+    
+    <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #ddd; color: #999; font-size: 0.85rem;">
+      <p id="p17footer"></p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const text = {
+    DE: {
+      welcome: { h: "LCM Communication Explorer", c: "Diese Studie untersucht, wie KI-Systeme Menschen verstehen. Sie werden mehrere Kommunikationsmissionen durchlaufen und beobachten, wie unterschiedliche Reflexionsschritte die Qualität von Antworten beeinflussen." },
+      research: { h: "Wähle deinen Forschungsmodus", d: "LCM-Light testet Basis-Reflexion (3 Missionen). LCM Extended erforscht auch, wie die KI aus Kommunikation lernt (5 Missionen)." },
+      consent: { h: "Einverständnis", c: "Deine Teilnahme ist freiwillig. Daten werden anonymisiert. Keine echten Daten eingeben.", l: "Ich stimme zu." },
+      info: { h: "Über dich", lAge: "Alter:", lAiExp: "KI-Erfahrung:", opts: ["nie", "selten", "gelegentlich", "häufig", "täglich"] },
+      llm: { h: "Dein KI-Modell", l: "Welches Modell nutzt du?" },
+      mission: { h: "Deine Kommunikationsmission", label: "Kontext", c: "In den folgenden Missionen untersuchen wir, wie KI-Systeme Menschen verstehen. Deine Aufgabe: Gehe gemeinsam mit einer KI eine Kommunikationssituation durch. Das Ziel ist nicht die perfekte Antwort, sondern zu beobachten, wie unterschiedliche Kommunikationsmodelle die Qualität beeinflussen." },
+      step7: { label: "Mission 1", h: "Verstehe die Person", why: "Die meisten KI-Systeme antworten sofort. Wir möchten testen, ob Antworten besser werden, wenn die KI zuerst versucht zu verstehen, wer die Person ist und was sie wirklich möchte.", task: "Deine Aufgabe", inst: "Kopiere den Prompt in dein gewähltes KI-Modell. Füge anschließend die erzeugte Analyse ein:", l: "Partner-Modell:" },
+      step8: { label: "Mission 2", h: "Verstehe dich selbst", why: "Menschen überlegen oft, welche Rolle sie in einem Gespräch einnehmen. Wir testen: Werden Antworten besser, wenn die KI zuerst ihre eigene Kommunikationsrolle reflektiert?", task: "Deine Aufgabe", inst: "Kopiere den Prompt in dein KI-Modell. Das Partner-Modell wird automatisch eingefügt:", l: "Self-Modell:" },
+      step9: { label: "Mission 3", h: "Verstehe die Kommunikation", why: "Bisher haben wir die Person und die KI betrachtet. Jetzt betrachten wir die Kommunikation selbst. Was ist das gemeinsame Ziel? Welche Missverständnisse könnten entstehen?", task: "Deine Aufgabe", inst: "Kopiere den Prompt in dein KI-Modell:", l: "Kommunikationsmodell:" },
+      step10: { label: "Mission 4", h: "Generiere die Antwort", inst: "Kopiere diesen Prompt in dein KI-Modell. Es nutzt alle bisherigen Modelle:", l: "Finale Antwort:" },
+      eval: { h: "Jetzt brauchen wir deine Einschätzung", c: "Es gibt keine richtige oder falsche Antwort. Uns interessiert, wie die Antwort aus deiner Sicht wirkt. Deine Bewertung hilft uns zu verstehen, welche Kommunikationsansätze Menschen als hilfreicher empfinden.", inst: "Bitte bewerte die Antwort. 1 = stimme gar nicht zu. 7 = stimme vollständig zu." },
+      ratings: [
+        { name: "understanding", label: "Die Antwort hat mein Anliegen verstanden." },
+        { name: "personalization", label: "Die Antwort war auf meine Situation zugeschnitten." },
+        { name: "helpfulness", label: "Die Antwort war hilfreich." },
+        { name: "trust", label: "Ich vertraue dieser Antwort." },
+        { name: "clarity", label: "Die Antwort war klar und verständlich." },
+        { name: "emotional_fit", label: "Die Antwort war emotional passend." }
+      ],
+      reflect: { h: "Helfe der KI zu lernen", c: "Stellen Sie sich vor, die KI könnte aus diesem Gespräch lernen. Was sollte sie sich merken? Was sollte sie beim nächsten Mal anders machen?" },
+      step14: { label: "Mission 5", h: "Die KI lernt aus Erfahrung", why: "Menschen speichern nicht nur Fakten. Sie speichern Erfahrungen. Diese Erfahrung fasst zusammen, was in der Kommunikation funktioniert hat und was nicht. In einer zukünftigen Unterhaltung könnte die KI diese Erfahrung nutzen, um besser zu kommunizieren.", task: "Deine Aufgabe", inst: "Kopiere den Prompt in dein KI-Modell:", l: "Experience Object:" },
+      future: { h: "Warum speichern wir diese Erfahrung?", c: "Stellen Sie sich vor: Die Kommunikation würde morgen weitergehen. Diese Erfahrung könnte dann genutzt werden, damit die KI sich erinnert, was sie gelernt hat. So entsteht ein Netzwerk von Erfahrungen, das KI-Systeme immer besser macht." },
+      complete: { h: "Mission abgeschlossen!", desc: "Du hast eine vollständige Kommunikationsmission durchlaufen. Deine Daten tragen zur Forschung über KI-Kommunikation bei.", opts: "Was möchtest du jetzt tun?", opt1: "Andere Modus starten", opt2: "Anderes Szenario", opt3: "Beenden & Daten herunterladen" },
+      end: { h: "Vielen Dank", c: "Deine Daten wurden anonymisiert gespeichert. Du hast zur Forschung über KI-Kommunikation beigetragen.", l: "Deine Daten:" }
+    },
+    EN: {
+      welcome: { h: "LCM Communication Explorer", c: "This study explores how AI systems understand people. You will go through multiple communication missions and observe how different reflection steps influence response quality." },
+      research: { h: "Choose Your Research Mode", d: "LCM-Light tests basic reflection (3 missions). LCM Extended also explores how AI learns from communication (5 missions)." },
+      consent: { h: "Consent", c: "Your participation is voluntary. Data stored anonymously. No real personal data please.", l: "I agree." },
+      info: { h: "About You", lAge: "Age:", lAiExp: "AI Experience:", opts: ["never", "rarely", "occasionally", "often", "daily"] },
+      llm: { h: "Your AI Model", l: "Which model are you using?" },
+      mission: { h: "Your Communication Mission", label: "Context", c: "In the following missions we explore how AI systems understand people. Your task: Go through a communication situation together with an AI. The goal is not the perfect answer but to observe how different communication models influence response quality." },
+      step7: { label: "Mission 1", h: "Understand the Person", why: "Most AI systems answer immediately. We want to test whether responses improve when the AI first tries to understand who the person is and what they really want.", task: "Your Task", inst: "Copy the prompt into your selected AI model. Then paste the generated analysis:", l: "Partner Model:" },
+      step8: { label: "Mission 2", h: "Understand Yourself", why: "Humans often reflect on the role they take in a conversation. We test: Do responses improve when the AI first reflects on its own communicative role?", task: "Your Task", inst: "Copy the prompt into your AI model. The Partner Model will be inserted automatically:", l: "Self Model:" },
+      step9: { label: "Mission 3", h: "Understand the Communication", why: "So far we looked at the person and the AI. Now we look at the communication itself. What is the shared goal? Which misunderstandings could emerge?", task: "Your Task", inst: "Copy the prompt into your AI model:", l: "Communication Model:" },
+      step10: { label: "Mission 4", h: "Generate the Response", inst: "Copy this prompt into your AI model. It uses all previous models:", l: "Final Answer:" },
+      eval: { h: "Now We Need Your Assessment", c: "There is no right or wrong answer. We are interested in how the response feels from your perspective. Your evaluation helps us understand which communication approaches people perceive as more helpful.", inst: "Please rate the response. 1 = strongly disagree. 7 = strongly agree." },
+      ratings: [
+        { name: "understanding", label: "The answer understood my situation." },
+        { name: "personalization", label: "The answer was personalized to my situation." },
+        { name: "helpfulness", label: "The answer was helpful." },
+        { name: "trust", label: "I trust this answer." },
+        { name: "clarity", label: "The answer was clear and understandable." },
+        { name: "emotional_fit", label: "The answer was emotionally appropriate." }
+      ],
+      reflect: { h: "Help the AI Learn", c: "Imagine the AI could learn from this conversation. What should it remember? What should it do differently next time?" },
+      step14: { label: "Mission 5", h: "The AI Learns from Experience", why: "Humans do not only store facts. They store experiences. This experience summarizes what worked and what did not work in the communication. In a future conversation, the AI could use this experience to communicate more effectively.", task: "Your Task", inst: "Copy the prompt into your AI model:", l: "Experience Object:" },
+      future: { h: "Why Store This Experience?", c: "Imagine: The communication continued tomorrow. This experience could then be used to help the AI remember what it learned. This creates a network of experiences making AI systems better." },
+      complete: { h: "Mission Complete!", desc: "You have completed a full communication mission. Your data contributes to research on AI communication.", opts: "What would you like to do now?", opt1: "Start Other Mode", opt2: "Try Another Scenario", opt3: "End & Download Data" },
+      end: { h: "Thank You", c: "Your data has been stored anonymously. You've contributed to AI communication research.", l: "Your Data:" }
+    }
+  };
+
+  const prompts = {
+    DE: {
+      p7: "Du bist ein Spezialist im Verstehen von Gesprächspartnern.\n\nErstelle ein Modell des Kommunikationspartners.\nAnalysiere: 1. Was wird explizit gewünscht? 2. Welche impliziten Ziele? 3. Welche Werte/Präferenzen? 4. Unsicherheiten? 5. Kommunikationsstil?\n\nFrage:\nIch will mit meiner Familie in den Abenteuerurlaub fahren. Wohin soll ich fahren?",
+      p8: "Du bist ein Spezialist im Reflektieren deiner Kommunikationsrolle.\n\nErstelle ein Self Model: Welche Rolle nimmst du ein? Welches Ziel verfolgst du?\nNutze: Frage + Partner-Modell.\n\nUrsprüngliche Frage:\nIch will mit meiner Familie in den Abenteuerurlaub fahren. Wohin soll ich fahren?\n\nPartner-Modell:\n{{partner}}",
+      p9: "Du bist Spezialist für Kommunikationsanalyse.\n\nErstelle ein Kommunikationsmodell: Gemeinsames Thema? Gemeinsames Ziel? Offene Fragen? Missverständnisrisiken?\n\nUrsprüngliche Frage:\nIch will mit meiner Familie in den Abenteuerurlaub fahren. Wohin soll ich fahren?\n\nPartner-Modell:\n{{partner}}\n\nSelf-Modell:\n{{self}}",
+      p10: "Du bist ein reflektierter Kommunikationsagent.\n\nBeantworte die Frage. Nutze: Frage + Partner-Modell + Self-Modell + Kommunikationsmodell.\n\nUrsprüngliche Frage:\nIch will mit meiner Familie in den Abenteuerurlaub fahren. Wohin soll ich fahren?\n\nPartner-Modell:\n{{partner}}\n\nSelf-Modell:\n{{self}}\n\nKommunikationsmodell:\n{{communication}}",
+      p14: "Du bist Experience Builder.\n\nErstelle aus dem Kommunikationsverlauf eine kurze Experience: Kontext, Ziel, Was war erfolgreich? Was fehlte? Was sollte erinnert werden?\n\nFrage:\nIch will mit meiner Familie in den Abenteuerurlaub fahren. Wohin soll ich fahren?\n\nPartner-Modell:\n{{partner}}\n\nSelf-Modell:\n{{self}}\n\nKommunikationsmodell:\n{{communication}}\n\nFinale Antwort:\n{{final}}\n\nNutzerfeedback:\n{{feedback}}"
+    },
+    EN: {
+      p7: "You are a specialist in understanding communication partners.\n\nCreate a model of the communication partner.\nAnalyze: 1. What is explicitly wanted? 2. Implicit goals? 3. Values/preferences? 4. Uncertainties? 5. Communication style?\n\nQuestion:\nI want to go on an adventure vacation with my family. Where should I go?",
+      p8: "You are a specialist in reflecting on your communicative role.\n\nCreate a Self Model: What role do you take? What goal do you pursue?\nUse: Question + Partner Model.\n\nOriginal question:\nI want to go on an adventure vacation with my family. Where should I go?\n\nPartner Model:\n{{partner}}",
+      p9: "You are a communication analysis specialist.\n\nCreate a Communication Model: Shared topic? Shared goal? Open questions? Misunderstanding risks?\n\nOriginal question:\nI want to go on an adventure vacation with my family. Where should I go?\n\nPartner Model:\n{{partner}}\n\nSelf Model:\n{{self}}",
+      p10: "You are a reflective communication agent.\n\nAnswer the question. Use: Question + Partner Model + Self Model + Communication Model.\n\nOriginal question:\nI want to go on an adventure vacation with my family. Where should I go?\n\nPartner Model:\n{{partner}}\n\nSelf Model:\n{{self}}\n\nCommunication Model:\n{{communication}}",
+      p14: "You are an Experience Builder.\n\nCreate a short experience from the communication flow: Context, Goal, What worked? What was missing? What should be remembered?\n\nQuestion:\nI want to go on an adventure vacation with my family. Where should I go?\n\nPartner Model:\n{{partner}}\n\nSelf Model:\n{{self}}\n\nCommunication Model:\n{{communication}}\n\nFinal Answer:\n{{final}}\n\nUser feedback:\n{{feedback}}"
+    }
+  };
+
+  const stageLabels = { DE: ["Verstehen", "Reflektieren", "Generieren", "Lernen"], EN: ["Understand", "Reflect", "Generate", "Learn"] };
+  const stageEmojis = ["🔍", "🧭", "🌐", "💬", "🧠"];
+
+  let lang = 'DE', mode = null, currentScreen = 0, runs = [];
+  let participants = JSON.parse(localStorage.getItem('lcm_participants')) || [];
+  
+  const state = {
+    participant_id: `anon_${Math.random().toString(36).substr(2, 9)}`,
+    participant_language: 'DE',
+    research_mode: null,
+    age: '', ai_experience: '', selected_llm: '',
+    partner_model: '', self_model: '', communication_model: '', final_answer: '', feedback: '', experience_object: '',
+    ratings: {}, timestamp_started: new Date().toISOString()
+  };
+
+  function setLanguage(l) { 
+    lang = l; 
+    state.participant_language = l; 
+    updateUI(); 
+    goToScreen(1); 
+  }
+  
+  function selectMode(m) { 
+    mode = m; 
+    state.research_mode = m; 
+    document.getElementById('modeLight').classList.toggle('selected', m === 'light'); 
+    document.getElementById('modeExtended').classList.toggle('selected', m === 'extended'); 
+    document.getElementById('btn2').disabled = !m; 
+  }
+  
+  function getScreensForMode(m) {
+    if (m === 'light') return [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 16, 17];
+    else return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+  }
+
+  function buildJourneyMap(screenNum) {
+    const stages = stageLabels[lang];
+    let html = '';
+    for (let i = 0; i < 5; i++) {
+      const cls = i < getStageForScreen(screenNum) ? 'passed' : (i === getStageForScreen(screenNum) ? 'active' : '');
+      html += `<div class="stage-dot ${cls}" title="${stages[i]}">${stageEmojis[i]}</div>`;
+      if (i < 4) html += `<div class="stage-connector ${cls}"></div>`;
+    }
+    return html;
+  }
+
+  function getStageForScreen(s) {
+    if (s <= 6) return -1;
+    if (s === 7 || s === 8) return 0;
+    if (s === 9) return 1;
+    if (s === 10) return 2;
+    if (s === 11 || s === 12 || s === 13) return 2;
+    if (s === 14 || s === 15) return 3;
+    return 4;
+  }
+
+  function updateUI() {
+    const t = text[lang];
+    const s = stageLabels[lang];
+    
+    // Screen 1: Welcome
+    document.getElementById('h1').textContent = t.welcome.h;
+    document.getElementById('welcomeBox').innerHTML = `<strong>${t.welcome.h}</strong><br>${t.welcome.c}`;
+    document.getElementById('journeyMap1').innerHTML = buildJourneyMap(1);
+    
+    // Screen 2: Research Mode
+    document.getElementById('h2').textContent = t.research.h;
+    document.getElementById('p2desc').textContent = t.research.d;
+    document.getElementById('journeyMap2').innerHTML = buildJourneyMap(2);
+    
+    // Screen 3: Consent
+    document.getElementById('h3').textContent = t.consent.h;
+    document.getElementById('consentBox').innerHTML = `<strong>${t.consent.h}</strong><br>${t.consent.c}`;
+    document.getElementById('consentLabel').textContent = t.consent.l;
+    document.getElementById('journeyMap3').innerHTML = buildJourneyMap(3);
+    
+    // Screen 4: Info
+    document.getElementById('h4').textContent = t.info.h;
+    document.getElementById('lAge').textContent = t.info.lAge;
+    document.getElementById('lAiExp').textContent = t.info.lAiExp;
+    document.getElementById('aiExp').innerHTML = '<option value="">-- Choose --</option>' + t.info.opts.map(o => `<option value="${o}">${o}</option>`).join('');
+    document.getElementById('journeyMap4').innerHTML = buildJourneyMap(4);
+    
+    // Screen 5: LLM
+    document.getElementById('h5').textContent = t.llm.h;
+    document.getElementById('lLlm').textContent = t.llm.l;
+    document.getElementById('journeyMap5').innerHTML = buildJourneyMap(5);
+    
+    // Screen 6: Mission
+    document.getElementById('missionLabel6').textContent = t.mission.label;
+    document.getElementById('h6').textContent = t.mission.h;
+    document.getElementById('missionBox6').innerHTML = `<strong>${t.mission.h}</strong><br>${t.mission.c}`;
+    const scenarioQuestion = lang === 'DE' 
+      ? "Ich will mit meiner Familie in den Abenteuerurlaub fahren. Wohin soll ich fahren?"
+      : "I want to go on an adventure vacation with my family. Where should I go?";
+    document.getElementById('scenario6').textContent = scenarioQuestion;
+    document.getElementById('journeyMap6').innerHTML = buildJourneyMap(6);
+    
+    // Screen 7: Partner Model
+    document.getElementById('missionLabel7').textContent = t.step7.label;
+    document.getElementById('h7').textContent = t.step7.h;
+    document.getElementById('whyBox7').innerHTML = `<strong>${lang === 'DE' ? 'Warum?' : 'Why?'}</strong> ${t.step7.why}`;
+    document.getElementById('h7task').textContent = t.step7.task;
+    document.getElementById('p7task').textContent = t.step7.inst;
+    document.getElementById('prompt7').textContent = prompts[lang].p7;
+    document.getElementById('lOutput7').textContent = t.step7.l;
+    document.getElementById('journeyMap7').innerHTML = buildJourneyMap(7);
+    
+    // Screen 8: Self Model
+    document.getElementById('missionLabel8').textContent = t.step8.label;
+    document.getElementById('h8').textContent = t.step8.h;
+    document.getElementById('whyBox8').innerHTML = `<strong>${lang === 'DE' ? 'Warum?' : 'Why?'}</strong> ${t.step8.why}`;
+    document.getElementById('h8task').textContent = t.step8.task;
+    document.getElementById('p8task').textContent = t.step8.inst;
+    const partnerText = state.partner_model || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    document.getElementById('prompt8').textContent = prompts[lang].p8.replace('{{partner}}', partnerText);
+    document.getElementById('lOutput8').textContent = t.step8.l;
+    document.getElementById('journeyMap8').innerHTML = buildJourneyMap(8);
+    
+    // Screen 9: Communication Model
+    document.getElementById('missionLabel9').textContent = t.step9.label;
+    document.getElementById('h9').textContent = t.step9.h;
+    document.getElementById('whyBox9').innerHTML = `<strong>${lang === 'DE' ? 'Was?' : 'What?'}</strong> ${t.step9.why}`;
+    document.getElementById('h9task').textContent = t.step9.task;
+    document.getElementById('p9task').textContent = t.step9.inst;
+    const p9Partner = state.partner_model || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    const p9Self = state.self_model || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    document.getElementById('prompt9').textContent = prompts[lang].p9.replace('{{partner}}', p9Partner).replace('{{self}}', p9Self);
+    document.getElementById('lOutput9').textContent = t.step9.l;
+    document.getElementById('journeyMap9').innerHTML = buildJourneyMap(9);
+    
+    // Screen 10: Reflected Agent
+    document.getElementById('missionLabel10').textContent = t.step10.label;
+    document.getElementById('h10').textContent = t.step10.h;
+    const p10Partner = state.partner_model || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    const p10Self = state.self_model || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    const p10Comm = state.communication_model || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    document.getElementById('prompt10').textContent = prompts[lang].p10.replace('{{partner}}', p10Partner).replace('{{self}}', p10Self).replace('{{communication}}', p10Comm);
+    document.getElementById('lOutput10').textContent = t.step10.l;
+    document.getElementById('journeyMap10').innerHTML = buildJourneyMap(10);
+    
+    // Screen 11: Evaluation Intro
+    document.getElementById('h11').textContent = t.eval.h;
+    const evalContext = lang === 'DE' 
+      ? `<strong>${t.eval.h}</strong><br>${t.eval.c}<br><br><strong>Die Frage war:</strong> "Ich will mit meiner Familie in den Abenteuerurlaub fahren. Wohin soll ich fahren?"<br><br>Jede der folgenden Fragen hilft uns zu verstehen, wie gut die KI-Antwort dein Anliegen erfasst und beantwortet hat.` 
+      : `<strong>${t.eval.h}</strong><br>${t.eval.c}<br><br><strong>The question was:</strong> "I want to go on an adventure vacation with my family. Where should I go?"<br><br>Each of the following questions helps us understand how well the AI response captured and addressed your concern.`;
+    document.getElementById('evalIntroBox').innerHTML = evalContext;
+    document.getElementById('journeyMap11').innerHTML = buildJourneyMap(11);
+    
+    // Screen 12: Ratings
+    document.getElementById('h12').textContent = t.eval.h;
+    document.getElementById('p12inst').textContent = t.eval.inst;
+    buildRatings(t.ratings);
+    document.getElementById('journeyMap12').innerHTML = buildJourneyMap(12);
+    
+    // Screen 13: Reflection
+    document.getElementById('h13').textContent = t.reflect.h;
+    document.getElementById('reflectIntroBox').innerHTML = `<strong>${t.reflect.h}</strong><br>${t.reflect.c}`;
+    document.getElementById('journeyMap13').innerHTML = buildJourneyMap(13);
+    
+    // Update Screen 13 button based on mode
+    const btn13 = document.getElementById('btn13next');
+    if (mode === 'light') {
+      btn13.textContent = lang === 'DE' ? 'Zum Abschluss →' : 'To Completion →';
+      btn13.onclick = function() { saveCurrentScreen(); goToScreen16(); };
+    } else {
+      btn13.textContent = lang === 'DE' ? 'Nächster Schritt →' : 'Next Step →';
+      btn13.onclick = function() { goToScreen(14); };
+    }
+    
+    // Screen 14: Experience Store
+    document.getElementById('missionLabel14').textContent = t.step14.label;
+    document.getElementById('h14').textContent = t.step14.h;
+    document.getElementById('whyBox14').innerHTML = `<strong>${lang === 'DE' ? 'Warum?' : 'Why?'}</strong> ${t.step14.why}`;
+    document.getElementById('h14task').textContent = t.step14.task;
+    document.getElementById('p14task').textContent = t.step14.inst;
+    const p14Partner = state.partner_model || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    const p14Self = state.self_model || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    const p14Comm = state.communication_model || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    const p14Final = state.final_answer || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    const p14Feedback = state.feedback || (lang === 'DE' ? '[Noch nicht eingefügt]' : '[Not yet entered]');
+    document.getElementById('prompt14').textContent = prompts[lang].p14.replace('{{partner}}', p14Partner).replace('{{self}}', p14Self).replace('{{communication}}', p14Comm).replace('{{final}}', p14Final).replace('{{feedback}}', p14Feedback);
+    document.getElementById('lOutput14').textContent = t.step14.l;
+    document.getElementById('journeyMap14').innerHTML = buildJourneyMap(14);
+    
+    // Screen 15: Future Episode
+    document.getElementById('h15').textContent = t.future.h;
+    document.getElementById('futureBox').innerHTML = `<strong>${t.future.h}</strong><br>${t.future.c}`;
+    document.getElementById('journeyMap15').innerHTML = buildJourneyMap(15);
+    
+    // Screen 17: End
+    document.getElementById('h17').textContent = t.end.h;
+    const endMsg = lang === 'DE'
+      ? 'Du hast eine vollständige Kommunikationsmission durchlaufen und wertvolle Daten für die Forschung beigetragen.'
+      : 'You have completed a full communication mission and contributed valuable data to research.';
+    document.getElementById('p17end').textContent = endMsg;
+    const endThanks = lang === 'DE'
+      ? `<strong>Vielen Dank für deine Teilnahme!</strong><br><br>Deine Daten werden anonymisiert und tragen dazu bei, dass wir verstehen, wie KI-Systeme Menschen besser kommunizieren können. Jede Bewertung, jede Reflexion und jede generierte Experience hilft uns, die nächste Generation von kommunikations-bewusstem Systemen zu bauen.<br><br>Wenn du möchtest, kannst du jetzt deine Daten als JSON oder CSV herunterladen und speichern.`
+      : `<strong>Thank you for your participation!</strong><br><br>Your data is stored anonymously and helps us understand how AI systems can communicate better with people. Every rating, reflection, and experience contributes to building the next generation of communication-aware systems.<br><br>If you wish, you can now download and save your data as JSON or CSV.`;
+    document.getElementById('p17thanks').innerHTML = endThanks;
+    document.getElementById('lJsonExport').textContent = t.end.l;
+    document.getElementById('p17footer').textContent = lang === 'DE' 
+      ? 'LCM Communication Explorer | Anonymisierte Forschungsdaten | Danke für deine Unterstützung'
+      : 'LCM Communication Explorer | Anonymous Research Data | Thank you for your support';
+  }
+  
+  function buildRatings(ratings) {
+    let html = '';
+    ratings.forEach((r, i) => {
+      html += `<div class="rating-group"><div class="rating-label"><strong>${r.label}</strong><span id="rv${i}">—</span></div><div class="rating-scale" id="rs${i}">`;
+      for (let j = 1; j <= 7; j++) html += `<button type="button" class="rating-btn" data-value="${j}" onclick="setRating(${i}, ${j})">${j}</button>`;
+      html += '</div></div>';
+    });
+    document.getElementById('ratingContainer').innerHTML = html;
+  }
+  
+  function setRating(idx, val) {
+    const rName = text[lang].ratings[idx].name;
+    state.ratings[rName] = val;
+    document.getElementById(`rv${idx}`).textContent = val;
+    document.querySelectorAll(`#rs${idx} .rating-btn`).forEach(b => (parseInt(b.dataset.value) <= val) ? b.classList.add('selected') : b.classList.remove('selected'));
+    checkRatingsComplete();
+  }
+  
+  function checkRatingsComplete() {
+    const allSet = text[lang].ratings.every((_, i) => state.ratings[text[lang].ratings[i].name]);
+    document.getElementById('btn12').disabled = !allSet;
+  }
+
+  function goToScreen(num) {
+    if (currentScreen === 3 && !document.getElementById('consent').checked) return;
+    saveCurrentScreen();
+    currentScreen = num;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(`screen${currentScreen}`).classList.add('active');
+    updateJourneyMaps();
+    window.scrollTo(0, 0);
+  }
+
+  function updateJourneyMaps() {
+    for (let i = 1; i <= 17; i++) {
+      const map = document.getElementById(`journeyMap${i}`);
+      if (map) map.innerHTML = buildJourneyMap(i);
+    }
+  }
+
+  function saveCurrentScreen() {
+    if (currentScreen === 4) { state.age = document.getElementById('age').value; state.ai_experience = document.getElementById('aiExp').value; }
+    if (currentScreen === 5) { state.selected_llm = document.getElementById('llmSelect').value; }
+    if (currentScreen === 7) state.partner_model = document.getElementById('output7').value;
+    if (currentScreen === 8) state.self_model = document.getElementById('output8').value;
+    if (currentScreen === 9) state.communication_model = document.getElementById('output9').value;
+    if (currentScreen === 10) state.final_answer = document.getElementById('output10').value;
+    if (currentScreen === 13) state.feedback = document.getElementById('feedback').value;
+    if (currentScreen === 14) state.experience_object = document.getElementById('output14').value;
+  }
+
+  function copyToClipboard(id) { navigator.clipboard.writeText(document.getElementById(id).textContent).then(() => alert(lang === 'DE' ? '✓ Kopiert' : '✓ Copied')); }
+
+  document.getElementById('consent').addEventListener('change', (e) => { document.getElementById('btn3').disabled = !e.target.checked; });
+  
+  document.getElementById('age').addEventListener('input', () => { 
+    const ok = document.getElementById('age').value && document.getElementById('aiExp').value; 
+    document.getElementById('btn4').disabled = !ok; 
+  });
+  
+  document.getElementById('aiExp').addEventListener('change', () => { 
+    const ok = document.getElementById('age').value && document.getElementById('aiExp').value; 
+    document.getElementById('btn4').disabled = !ok; 
+  });
+  
+  document.getElementById('llmSelect').addEventListener('change', (e) => { 
+    document.getElementById('otherLLMGroup').style.display = e.target.value === 'other' ? 'block' : 'none'; 
+    document.getElementById('btn5').disabled = !e.target.value; 
+  });
+
+  ['output7', 'output8', 'output10'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => { 
+      const btnId = 'btn' + id.replace('output', ''); 
+      if (document.getElementById(btnId)) document.getElementById(btnId).disabled = !document.getElementById(id).value; 
+    });
+  });
+  
+  const el9 = document.getElementById('output9');
+  if (el9) el9.addEventListener('input', () => { document.getElementById('btn9').disabled = !document.getElementById('output9').value; });
+  
+  const el14 = document.getElementById('output14');
+  if (el14) el14.addEventListener('input', () => { document.getElementById('btn14').disabled = !document.getElementById('output14').value; });
+
+  function goToScreen16() {
+    saveCurrentScreen();
+    state.timestamp_completed = new Date().toISOString();
+    runs.push({...state});
+    currentScreen = 16;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen16').classList.add('active');
+    renderCompletion();
+  }
+
+  function renderCompletion() {
+    const t = text[lang];
+    document.getElementById('h16').textContent = t.complete.h;
+    document.getElementById('p16desc').textContent = t.complete.desc;
+    let opts = `<p style="margin: 1.5rem 0; font-weight: 600;">${t.complete.opts}</p><div class="completion-options">`;
+    opts += `<div class="completion-opt" onclick="selectNextAction('light')"><strong>🔄</strong><br>${t.complete.opt1}</div>`;
+    opts += `<div class="completion-opt" onclick="selectNextAction('scenario')"><strong>🗺️</strong><br>${t.complete.opt2}</div>`;
+    opts += `<div class="completion-opt" onclick="selectNextAction('end')"><strong>📥</strong><br>${t.complete.opt3}</div>`;
+    opts += `</div>`;
+    document.getElementById('completionOpts').innerHTML = opts;
+  }
+
+  function selectNextAction(action) {
+    if (action === 'end') {
+      participants.push({...state, runs});
+      localStorage.setItem('lcm_participants', JSON.stringify(participants));
+      currentScreen = 17;
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen17').classList.add('active');
+      updateUI();
+      generateJSON();
+      window.scrollTo(0, 0);
+    } else {
+      // Reset for next run
+      const newMode = action === 'light' ? 'light' : 'extended';
+      mode = newMode;
+      state.research_mode = mode;
+      state.partner_model = state.self_model = state.communication_model = state.final_answer = state.feedback = state.experience_object = '';
+      state.ratings = {};
+      state.timestamp_started = new Date().toISOString();
+      goToScreen(6);
+    }
+  }
+
+  function goToScreen(num) {
+    if (currentScreen === 3 && !document.getElementById('consent').checked) return;
+    if (currentScreen === 4) {
+      if (!document.getElementById('age').value || !document.getElementById('aiExp').value) return;
+    }
+    if (currentScreen === 5) {
+      if (!document.getElementById('llmSelect').value) return;
+    }
+    saveCurrentScreen();
+    currentScreen = num;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    if (document.getElementById(`screen${currentScreen}`)) {
+      document.getElementById(`screen${currentScreen}`).classList.add('active');
+    }
+    updateUI();
+    updateJourneyMaps();
+    window.scrollTo(0, 0);
+  }
+
+  function updateJourneyMaps() {
+    for (let i = 1; i <= 17; i++) {
+      const map = document.getElementById(`journeyMap${i}`);
+      if (map) map.innerHTML = buildJourneyMap(i);
+    }
+  }
+
+  function saveCurrentScreen() {
+    if (currentScreen === 4) { state.age = document.getElementById('age').value; state.ai_experience = document.getElementById('aiExp').value; }
+    if (currentScreen === 5) { state.selected_llm = document.getElementById('llmSelect').value; }
+    if (currentScreen === 7) state.partner_model = document.getElementById('output7').value;
+    if (currentScreen === 8) state.self_model = document.getElementById('output8').value;
+    if (currentScreen === 9) state.communication_model = document.getElementById('output9').value;
+    if (currentScreen === 10) state.final_answer = document.getElementById('output10').value;
+    if (currentScreen === 13) state.feedback = document.getElementById('feedback').value;
+    if (currentScreen === 14) state.experience_object = document.getElementById('output14').value;
+  }
+
+  function goToScreen16() {
+    saveCurrentScreen();
+    state.timestamp_completed = new Date().toISOString();
+    runs.push({...state});
+    currentScreen = 16;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen16').classList.add('active');
+    renderCompletion();
+    window.scrollTo(0, 0);
+  }
+
+  function restartMission() {
+    // Reset to start
+    currentScreen = 0;
+    mode = null;
+    state.research_mode = null;
+    state.partner_model = state.self_model = state.communication_model = state.final_answer = state.feedback = state.experience_object = '';
+    state.ratings = {};
+    state.timestamp_started = new Date().toISOString();
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen0').classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function copyToClipboard(id) { navigator.clipboard.writeText(document.getElementById(id).textContent).then(() => alert(lang === 'DE' ? '✓ Kopiert' : '✓ Copied')); }
+
+  function generateJSON() { document.getElementById('jsonOutput').value = JSON.stringify({participant: state, all_runs: runs}, null, 2); }
+  function downloadJSON() { const json = JSON.stringify({participant: state, all_runs: runs}, null, 2); const blob = new Blob([json], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `lcm_${state.participant_id}.json`; link.click(); }
+  function downloadCSV() {
+    const headers = ['participant_id', 'language', 'mode', 'run_num', 'age', 'ai_experience', 'llm', 'understanding', 'personalization', 'helpfulness', 'trust', 'clarity', 'emotional_fit', 'timestamp_started', 'timestamp_completed'];
+    const rows = [headers.map(h => `"${h}"`).join(',')];
+    runs.forEach((r, i) => { rows.push([r.participant_id, r.participant_language, r.research_mode, i+1, r.age, r.ai_experience, r.selected_llm, r.ratings.understanding || '', r.ratings.personalization || '', r.ratings.helpfulness || '', r.ratings.trust || '', r.ratings.clarity || '', r.ratings.emotional_fit || '', r.timestamp_started, r.timestamp_completed].map(v => `"${v}"`).join(',')); });
+    const csv = rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `lcm_${state.participant_id}.csv`;
+    link.click();
+  }
+
+  // Event Listeners
+  document.getElementById('consent').addEventListener('change', (e) => { document.getElementById('btn3').disabled = !e.target.checked; });
+  document.getElementById('age').addEventListener('input', () => { const ok = document.getElementById('age').value && document.getElementById('aiExp').value; document.getElementById('btn4').disabled = !ok; });
+  document.getElementById('aiExp').addEventListener('change', () => { const ok = document.getElementById('age').value && document.getElementById('aiExp').value; document.getElementById('btn4').disabled = !ok; });
+  document.getElementById('llmSelect').addEventListener('change', (e) => { document.getElementById('otherLLMGroup').style.display = e.target.value === 'other' ? 'block' : 'none'; document.getElementById('btn5').disabled = !e.target.value; });
+
+  ['output7', 'output8', 'output9', 'output10', 'output14'].forEach(id => { 
+    const el = document.getElementById(id); 
+    if (el) el.addEventListener('input', () => { 
+      const btnId = 'btn' + id.replace('output', ''); 
+      if (document.getElementById(btnId)) document.getElementById(btnId).disabled = !document.getElementById(id).value; 
+    }); 
+  });
+
+  updateUI();
+</script>
+
+</body>
+</html>
